@@ -1,0 +1,67 @@
+name: coding-agent
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  agent:
+    if: github.event.label.name == 'agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: agent-issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install agent deps
+        run: pip install openai
+
+      - name: Run coding agent
+        env:
+          ITERACOMPUTE_API_KEY: ${{ secrets.ITERACOMPUTE_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          printf '%s\n\n%s\n' "$ISSUE_TITLE" "$ISSUE_BODY" > /tmp/task.md
+          AGENT_TASK="$(cat /tmp/task.md)" python3 .github/agent/run.py
+
+      - name: Open pull request
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          BRANCH="agent/issue-$ISSUE_NUMBER"
+          SAFE_TITLE="$(printf 'Agent: %s' "$ISSUE_TITLE" | tr -d '"' | head -c 120)"
+          git config user.name "muse-agent"
+          git config user.email "muse-agent@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Agent made no changes."
+            gh issue comment "$ISSUE_NUMBER" --body "Agent finished but made no changes. Nothing to review."
+            exit 0
+          fi
+          git commit -m "$SAFE_TITLE"
+          git push -u origin "$BRANCH"
+          {
+            echo "Automated fix for #$ISSUE_NUMBER."
+            echo
+            echo "## Agent summary"
+            cat .agent_summary.txt 2>/dev/null || echo "No summary provided."
+          } > /tmp/pr_body.md
+          PR_URL="$(gh pr create --title "$SAFE_TITLE" --body-file /tmp/pr_body.md)"
+          gh issue comment "$ISSUE_NUMBER" --body "Done — review the pull request: $PR_URL"
