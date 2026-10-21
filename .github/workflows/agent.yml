@@ -37,6 +37,21 @@ jobs:
           printf '%s\n\n%s\n' "$ISSUE_TITLE" "$ISSUE_BODY" > /tmp/task.md
           AGENT_TASK="$(cat /tmp/task.md)" python3 .github/agent/run.py
 
+      - name: Persist agent memory to main
+        if: always()
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "muse-agent"
+          git config user.email "muse-agent@users.noreply.github.com"
+          git add memory/
+          if git diff --cached --quiet; then
+            echo "No memory changes to persist."
+          else
+            git commit -m "Agent memory update (issue #$ISSUE_NUMBER)"
+            git push origin HEAD:main || echo "memory push skipped (concurrent update)"
+          fi
+
       - name: Open pull request
         if: always()
         env:
@@ -65,3 +80,71 @@ jobs:
           } > /tmp/pr_body.md
           PR_URL="$(gh pr create --title "$SAFE_TITLE" --body-file /tmp/pr_body.md)"
           gh issue comment "$ISSUE_NUMBER" --body "Done — review the pull request: $PR_URL"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
