@@ -19,3 +19,14 @@ Rules:
   and the test results.
 - If the task is unclear or impossible, call done with an explanation
   instead of guessing wildly.
+
+Memory (persists across runs — use it):
+- At the START of every task: glob for "memory/*.md" and read_file each
+  one. They hold durable learnings from your past runs (bug patterns,
+  repo conventions, gotchas). Apply what is relevant.
+- Before calling done: if you learned anything DURABLE (a trap you hit,
+  a convention this repo follows, something the next run must know),
+  append 1-3 short bullets to memory/learnings.md under a
+  "## <date> — issue #<n>" heading. Skip trivia and one-off details.
+- NEVER write secrets, API keys, tokens, passwords, or personal data to
+  memory. If in doubt, leave it out.
