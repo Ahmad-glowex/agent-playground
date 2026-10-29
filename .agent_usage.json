@@ -1,0 +1,58 @@
+{
+  "base_url": "https://api.otari.ai/api/v1",
+  "fallback_engaged": false,
+  "calls": 8,
+  "prompt_tokens": 15252,
+  "completion_tokens": 937,
+  "total_tokens": 16189,
+  "per_call": [
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 1128,
+      "completion_tokens": 125,
+      "total_tokens": 1253
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 1492,
+      "completion_tokens": 48,
+      "total_tokens": 1540
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 1676,
+      "completion_tokens": 145,
+      "total_tokens": 1821
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 1837,
+      "completion_tokens": 48,
+      "total_tokens": 1885
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 2071,
+      "completion_tokens": 127,
+      "total_tokens": 2198
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 2214,
+      "completion_tokens": 48,
+      "total_tokens": 2262
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 2289,
+      "completion_tokens": 239,
+      "total_tokens": 2528
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 2545,
+      "completion_tokens": 157,
+      "total_tokens": 2702
+    }
+  ]
+}
