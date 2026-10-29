@@ -30,10 +30,10 @@ jobs:
 
       - name: Run coding agent via Otari
         env:
-          LLM_BASE_URL: https://api.otari.ai/v1
+          LLM_BASE_URL: https://api.otari.ai/api/v1
           LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
           LLM_MODEL: ${{ vars.OTARI_MODEL || 'deepseek/deepseek-v4-pro-0813' }}
-          LLM_FALLBACK_MODEL: ${{ vars.OTARI_FALLBACK_MODEL || 'openai/gpt-4o-mini' }}
+          LLM_FALLBACK_MODEL: ${{ vars.OTARI_FALLBACK_MODEL || 'bedrock:amazon.nova-lite-v1:0' }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |

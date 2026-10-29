@@ -16,7 +16,7 @@ The original `agent` workflow still talks to its provider directly.
 - `.github/agent/run.py`
   - The model client is now gateway-agnostic: `LLM_BASE_URL`,
     `LLM_API_KEY`, `LLM_MODEL` come from the environment, so the same agent
-    runs against Otari (`https://api.otari.ai/v1`) with an `otk_` workspace
+    runs against Otari (`https://api.otari.ai/api/v1`) with an `otk_` workspace
     token. The original IteraCompute setup keeps working unchanged.
   - `ModelRouter`: if the primary model fails with a transient error
     (timeout, connection failure, rate limit, 5xx), the run switches to
@@ -42,12 +42,12 @@ The original `agent` workflow still talks to its provider directly.
 
 ## Otari features used
 
-- Hosted Otari gateway at `https://api.otari.ai/v1` (OpenAI-compatible).
+- Hosted Otari gateway at `https://api.otari.ai/api/v1` (OpenAI-compatible).
 - Workspace API token (`otk_…`) — the app only ever holds the gateway
   token, never a provider key.
 - Multi-provider model choice through one endpoint, including open-weight
   models (defaults: `deepseek/deepseek-v4-pro-0813` primary,
-  `openai/gpt-4o-mini` fallback; both overridable by repo variables).
+  `bedrock:amazon.nova-lite-v1:0` fallback; both overridable by repo variables).
 - Client-side failover routing across providers via the gateway.
 - Usage observability: per-call token usage from gateway responses,
   written into the pull request.
@@ -99,11 +99,45 @@ python3 tests/test_otari_routing.py # offline routing/usage tests
 ## Status
 
 - [x] Gateway routing, failover, and usage tracking implemented + tested offline
-- [ ] Live run through Otari with a real workspace token
-- [ ] Live `agent-otari` issue → PR run on GitHub
+- [x] Live run through Otari with a real workspace token — 2026-10-29:
+      the agent fixed the deliberate `total()` bug end-to-end via
+      `deepseek/deepseek-v4-pro-0813` (7 gateway calls, 12,700 tokens,
+      tests passing; usage record in the run's `.agent_usage.json`)
+- [ ] Live `agent-otari` issue → PR run on GitHub (the workflow must be
+      on the default branch for GitHub to trigger it from an issue label)
 - [ ] Demo video + hackathon feedback (see submission email, due Nov 11)
 
 ## Feedback for the Otari team
 
-_To be completed from the live runs — what worked, what didn't, what was
-missing. Drafted honestly from real usage, not in advance._
+From the live runs on 2026-10-29 (kept honest — good and bad):
+
+**What worked**
+- Drop-in swap: the agent already spoke the OpenAI API, so pointing
+  `base_url` at Otari was the whole integration. Tool calling worked
+  first try on `deepseek/deepseek-v4-pro-0813`.
+- Every response carries `cost_usd` / `estimated_cost` — cost
+  observability without a second API call.
+- When I used the wrong base path, the gateway's error message itself
+  named the correct one. More APIs should fail this helpfully.
+
+**What didn't work**
+- The Quickstart and blog examples point at `https://api.otari.ai/v1`,
+  but the live gateway serves `/api/v1` — the docs' path 404s (with the
+  helpful pointer above). Docs and gateway disagree.
+- `GET /api/v1/models` lists 197 models but does **not** include
+  `deepseek/deepseek-v4-pro-0813`, which the same workspace can
+  successfully call. It is hard to trust the list as the source of what
+  is available.
+- A fresh workspace has no OpenAI provider configured
+  (`provider_not_configured`), so the docs' example fallback
+  (`openai/gpt-4o-mini`) fails out of the box; I had to discover a
+  working fallback (`bedrock:amazon.nova-lite-v1:0`) by trial.
+- The workspace key is shown exactly once at creation with no way to
+  reveal it again; in an agent-driven browser session the value was
+  effectively trapped (the agent could not relay it, and clipboard
+  contents did not cross to the user's phone), forcing a second key to
+  be created on the user's own phone instead. A "reveal again after
+  re-auth" option would have saved it.
+
+**Still to add after the GitHub-side run:** dashboard Usage tab and
+wallet behaviour, and whether I would keep using Otari unprompted.
