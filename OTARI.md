@@ -52,11 +52,15 @@ The original `agent` workflow still talks to its provider directly.
 - Usage observability: per-call token usage from gateway responses,
   written into the pull request.
 
-Provided by the Otari workspace — platform capabilities this project
-relies on but has not yet verified in a live run:
+Provided by the Otari workspace — verified in the dashboard on
+2026-10-29 after the runs above:
 
-- Usage also appears in the Otari dashboard's Usage tab.
-- The workspace wallet caps what the token can spend in total.
+- The dashboard Usage tab shows the runs: 37 requests, 40.6k billed
+  tokens, $0.02 tracked cost (Sep 29 – Oct 29), and the wallet shows
+  $1.98 of $2.00 remaining, so the wallet does cap what the token can
+  spend in total. One caveat for the Otari team: the WAF-blocked
+  requests never reach the gateway, so they are invisible in Usage —
+  the dashboard's 2.7% error rate does not include them.
 
 ## Token safety
 
@@ -162,6 +166,5 @@ From the live runs on 2026-10-29 (kept honest — good and bad):
   be created on the user's own phone instead. A "reveal again after
   re-auth" option would have saved it.
 
-**Still to add:** dashboard Usage tab and wallet behaviour (checked
-against the runs above), and whether I would keep using Otari
-unprompted.
+**Still to add:** whether I would keep using Otari unprompted
+(Tashfiq's own call, for the submission).
