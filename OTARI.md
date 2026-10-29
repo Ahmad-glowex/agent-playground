@@ -103,8 +103,14 @@ python3 tests/test_otari_routing.py # offline routing/usage tests
       the agent fixed the deliberate `total()` bug end-to-end via
       `deepseek/deepseek-v4-pro-0813` (7 gateway calls, 12,700 tokens,
       tests passing; usage record in the run's `.agent_usage.json`)
-- [ ] Live `agent-otari` issue → PR run on GitHub (the workflow must be
-      on the default branch for GitHub to trigger it from an issue label)
+- [x] Live `agent-otari` issue → PR run on GitHub — 2026-10-29, after
+      merging this branch to `main` (GitHub only triggers issue-label
+      workflows from the default branch): issue #3 → PR #7
+      (https://github.com/Ahmad-glowex/agent-playground/pull/7),
+      8 gateway calls, 16,189 tokens, tests green. Honest nuance: the
+      deliberate bug had already been fixed on `main` by an earlier PR,
+      so the agent refactored an already-correct loop; the demo video
+      will re-run the flow against a reintroduced bug.
 - [ ] Demo video + hackathon feedback (see submission email, due Nov 11)
 
 ## Feedback for the Otari team
@@ -121,6 +127,23 @@ From the live runs on 2026-10-29 (kept honest — good and bad):
   named the correct one. More APIs should fail this helpfully.
 
 **What didn't work**
+- **The gateway's front-end WAF rejects ordinary coding-agent traffic.**
+  Three consecutive GitHub Actions agent runs died on their first call
+  with `PermissionDeniedError: 403` and zero tokens used, while identical
+  calls succeeded from a local machine. Root-caused by bisecting the
+  request content from the runner itself: the block is an AWS ALB/WAF in
+  front of the API (`server: awselb/2.0`, bare HTML "403 Forbidden"
+  page, no JSON error body), and the trigger is **markdown inline code
+  containing a function call** in the message text. Requests containing
+  `` `total()` `` or `` `total([1, 2, 3])` `` are blocked; the same text
+  without backticks, a backticked file path (`` `app/calc.py` ``), and a
+  backticked shell command (`` `ls -la` ``) all pass. GitHub issue
+  bodies — the natural input for a coding agent — routinely contain
+  inline code like this, so the gateway currently cannot serve a real
+  issue→PR agent without rewriting the user's words first. The failure
+  is also misleading: SDKs surface the HTML page as a *permission* error,
+  which sends you debugging your API key, not your prose. A JSON error
+  naming the WAF rule would have saved hours.
 - The Quickstart and blog examples point at `https://api.otari.ai/v1`,
   but the live gateway serves `/api/v1` — the docs' path 404s (with the
   helpful pointer above). Docs and gateway disagree.
@@ -139,5 +162,6 @@ From the live runs on 2026-10-29 (kept honest — good and bad):
   be created on the user's own phone instead. A "reveal again after
   re-auth" option would have saved it.
 
-**Still to add after the GitHub-side run:** dashboard Usage tab and
-wallet behaviour, and whether I would keep using Otari unprompted.
+**Still to add:** dashboard Usage tab and wallet behaviour (checked
+against the runs above), and whether I would keep using Otari
+unprompted.
