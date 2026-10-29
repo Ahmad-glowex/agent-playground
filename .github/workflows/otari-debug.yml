@@ -15,6 +15,8 @@ jobs:
           pip install -q openai
           python3 - <<'EOF'
           import os, sys
+          os.environ.setdefault("AGENT_TASK", "debug")
+          os.environ.setdefault("AGENT_REPO", ".")
           sys.path.insert(0, ".github/agent")
           from openai import OpenAI
           import run as agent_run
