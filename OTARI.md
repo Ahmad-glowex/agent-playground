@@ -63,6 +63,10 @@ The original `agent` workflow still talks to its provider directly.
   responses, written into the pull request.
 - A WAF-compatibility rewrite (`waf_safe`) for the gateway's front-end
   filter described under Feedback.
+- Built-in `otari_code_execution` tool — verified live with one call
+  (exact 18-digit product returned); not integrated into the agent,
+  which has its own shell. Recorded under Feedback because its billing
+  is visible but its execution is not.
 
 Provided by the Otari workspace — verified in the dashboard on
 2026-10-29 after the runs above:
@@ -141,10 +145,21 @@ From the live runs on 2026-10-29 (kept honest — good and bad):
   first try on `deepseek/deepseek-v4-pro-0813`.
 - Every response carries `cost_usd` / `estimated_cost` — cost
   observability without a second API call.
+- The built-in `otari_code_execution` tool works on the hosted gateway:
+  asked for an exact 123456789 × 987654321, it returned the exact
+  18-digit product, and the call's `cost_usd` ($0.0111 against a
+  $0.0004 token-only estimate) shows the execution ran and was billed.
 - When I used the wrong base path, the gateway's error message itself
   named the correct one. More APIs should fail this helpfully.
 
 **What didn't work**
+- Built-in tool calls are invisible in the response: the
+  `otari_code_execution` call above returned with empty `tool_calls`
+  and no trace of what code ran, and its `estimated_cost` ($0.0004)
+  diverged ~26x from the billed `cost_usd` ($0.0111) with nothing in
+  the response explaining the gap. For a gateway pitched on
+  observability, built-in executions should appear in the transcript
+  and be itemised in usage.
 - **The gateway's front-end WAF rejects ordinary coding-agent traffic.**
   Three consecutive GitHub Actions agent runs died on their first call
   with `PermissionDeniedError: 403` and zero tokens used, while identical
