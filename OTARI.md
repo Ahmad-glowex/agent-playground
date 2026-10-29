@@ -127,7 +127,9 @@ python3 tests/test_otari_routing.py # offline routing/usage tests
       deliberate bug had already been fixed on `main` by an earlier PR,
       so the agent refactored an already-correct loop; the demo video
       will re-run the flow against a reintroduced bug.
-- [ ] Demo video + hackathon feedback (see submission email, due Nov 11)
+- [ ] Demo video (demo issue #8 is staged with the deliberate bug
+      restored on `main`; the recording adds the `agent-otari` label
+      live) + final feedback wording (see submission email, due Nov 11)
 
 ## Feedback for the Otari team
 
@@ -159,7 +161,13 @@ From the live runs on 2026-10-29 (kept honest — good and bad):
   issue→PR agent without rewriting the user's words first. The failure
   is also misleading: SDKs surface the HTML page as a *permission* error,
   which sends you debugging your API key, not your prose. A JSON error
-  naming the WAF rule would have saved hours.
+  naming the WAF rule would have saved hours. Filed as
+  https://github.com/mozilla-ai/otari/issues/2704 (the three doc/API
+  mismatches below are https://github.com/mozilla-ai/otari/issues/2705).
+  My workaround is the `waf_safe` guard described above; after a hostile
+  review of that guard, I live-verified its exact output on the original
+  failing issue body — the same bytes that were rejected three times
+  now return 200 with the full agent configuration.
 - The Quickstart and blog examples point at `https://api.otari.ai/v1`,
   but the live gateway serves `/api/v1` — the docs' path 404s (with the
   helpful pointer above). Docs and gateway disagree.
