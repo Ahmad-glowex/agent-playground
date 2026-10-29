@@ -1,0 +1,9 @@
+{
+  "base_url": "https://api.otari.ai/api/v1",
+  "fallback_engaged": false,
+  "calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "total_tokens": 0,
+  "per_call": []
+}
