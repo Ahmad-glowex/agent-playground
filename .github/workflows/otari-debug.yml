@@ -6,36 +6,20 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      LLM_BASE_URL: https://api.otari.ai/api/v1
+      LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
+      LLM_MODEL: deepseek/deepseek-v4-pro-0813
+      LLM_FALLBACK_MODEL: bedrock:amazon.nova-lite-v1:0
     steps:
       - uses: actions/checkout@v4
-      - name: Parameter bisect test
+      - name: Run the real agent entrypoint with the real issue text
         env:
-          LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install -q openai
-          python3 - <<'EOF'
-          import os
-          from openai import OpenAI
-
-          client = OpenAI(base_url="https://api.otari.ai/api/v1",
-                          api_key=os.environ["LLM_API_KEY"])
-          msgs = [{"role": "user", "content": "Reply with exactly: OK"}]
-          variants = [
-              ("d_maxtokens2048", dict(max_tokens=2048)),
-              ("e_temperature", dict(max_tokens=20, temperature=0.2)),
-              ("f_both_agent_params", dict(max_tokens=2048, temperature=0.2)),
-              ("g_control_small", dict(max_tokens=20)),
-          ]
-          for name, extra in variants:
-              try:
-                  r = client.chat.completions.create(
-                      model="deepseek/deepseek-v4-pro-0813",
-                      messages=msgs, **extra)
-                  print(name, "-> OK:", (r.choices[0].message.content or "")[:30])
-              except Exception as e:
-                  print(name, "-> ERROR:", type(e).__name__, str(e)[:160])
-                  resp = getattr(e, "response", None)
-                  if resp is not None:
-                      print("   status:", resp.status_code,
-                            "body:", resp.text[:300])
-          EOF
+          gh issue view 3 --json title,body \
+            --jq '"\(.title)\n\n\(.body)"' > /tmp/task.md
+          echo "--- task word count: $(wc -w < /tmp/task.md)"
+          AGENT_TASK="$(cat /tmp/task.md)" AGENT_MAX_STEPS=2 \
+            python3 .github/agent/run.py 2>&1 | tail -15
