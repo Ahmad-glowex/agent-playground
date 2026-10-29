@@ -8,43 +8,32 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Graduated payload test
+      - name: Parameter bisect test
         env:
           LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
         run: |
           pip install -q openai
           python3 - <<'EOF'
-          import os, sys
-          os.environ.setdefault("AGENT_TASK", "debug")
-          os.environ.setdefault("AGENT_REPO", ".")
-          sys.path.insert(0, ".github/agent")
+          import os
           from openai import OpenAI
-          import run as agent_run
 
           client = OpenAI(base_url="https://api.otari.ai/api/v1",
                           api_key=os.environ["LLM_API_KEY"])
-          system = open(".github/agent/AGENT.md").read()
-          user = "Issue #3: Fix total() in app/calc.py - it skips the last item."
-
+          msgs = [{"role": "user", "content": "Reply with exactly: OK"}]
           variants = [
-              ("a_tools_only", [{"role": "user", "content": user}],
-               dict(tools=agent_run.TOOLS, tool_choice="auto")),
-              ("b_prompt_only",
-               [{"role": "system", "content": system},
-                {"role": "user", "content": user}], dict()),
-              ("c_full_agent_call",
-               [{"role": "system", "content": system},
-                {"role": "user", "content": user}],
-               dict(tools=agent_run.TOOLS, tool_choice="auto")),
+              ("d_maxtokens2048", dict(max_tokens=2048)),
+              ("e_temperature", dict(max_tokens=20, temperature=0.2)),
+              ("f_both_agent_params", dict(max_tokens=2048, temperature=0.2)),
+              ("g_control_small", dict(max_tokens=20)),
           ]
-          for name, messages, extra in variants:
+          for name, extra in variants:
               try:
                   r = client.chat.completions.create(
                       model="deepseek/deepseek-v4-pro-0813",
-                      messages=messages, max_tokens=20, **extra)
-                  print(name, "-> OK:", (r.choices[0].message.content or "")[:40])
+                      messages=msgs, **extra)
+                  print(name, "-> OK:", (r.choices[0].message.content or "")[:30])
               except Exception as e:
-                  print(name, "-> ERROR:", type(e).__name__, str(e)[:200])
+                  print(name, "-> ERROR:", type(e).__name__, str(e)[:160])
                   resp = getattr(e, "response", None)
                   if resp is not None:
                       print("   status:", resp.status_code,
