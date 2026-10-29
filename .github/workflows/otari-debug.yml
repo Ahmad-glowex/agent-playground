@@ -6,20 +6,51 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      LLM_BASE_URL: https://api.otari.ai/api/v1
-      LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
-      LLM_MODEL: deepseek/deepseek-v4-pro-0813
-      LLM_FALLBACK_MODEL: bedrock:amazon.nova-lite-v1:0
     steps:
       - uses: actions/checkout@v4
-      - name: Run the real agent entrypoint with the real issue text
+      - name: User-text bisect
         env:
+          LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install -q openai
           gh issue view 3 --json title,body \
             --jq '"\(.title)\n\n\(.body)"' > /tmp/task.md
-          echo "--- task word count: $(wc -w < /tmp/task.md)"
-          AGENT_TASK="$(cat /tmp/task.md)" AGENT_MAX_STEPS=2 \
-            python3 .github/agent/run.py 2>&1 | tail -15
+          python3 - <<'EOF'
+          import os, sys
+          os.environ.setdefault("AGENT_TASK", "debug")
+          os.environ.setdefault("AGENT_REPO", ".")
+          sys.path.insert(0, ".github/agent")
+          from openai import OpenAI
+          import run as agent_run
+
+          client = OpenAI(base_url="https://api.otari.ai/api/v1",
+                          api_key=os.environ["LLM_API_KEY"])
+          system = open(".github/agent/AGENT.md").read()
+          task = open("/tmp/task.md").read().strip()
+          title, body = task.split("\n\n", 1)
+          paren = ("(This issue is the live demo for the Otari gateway "
+                   "mode \u2014 Mozilla Developers Wilding hackathon.)")
+          variants = [
+              ("u1_title_only", title),
+              ("u2_body_only", body),
+              ("u3_exact", f"TASK (from GitHub issue):\n{task}"),
+              ("u4_no_paren", f"TASK (from GitHub issue):\n{task}".replace(paren, "").strip()),
+              ("u5_paren_only", paren),
+          ]
+          for name, user in variants:
+              try:
+                  r = client.chat.completions.create(
+                      model="deepseek/deepseek-v4-pro-0813",
+                      messages=[{"role": "system", "content": system},
+                                {"role": "user", "content": user}],
+                      tools=agent_run.TOOLS, tool_choice="auto",
+                      temperature=0.2, max_tokens=2048)
+                  print(name, "-> OK")
+              except Exception as e:
+                  print(name, "-> ERROR:", type(e).__name__, str(e)[:140])
+                  resp = getattr(e, "response", None)
+                  if resp is not None:
+                      print("   status:", resp.status_code,
+                            "body:", resp.text[:250])
+          EOF
