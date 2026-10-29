@@ -1,0 +1,88 @@
+name: coding-agent-otari
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  agent:
+    if: github.event.label.name == 'agent-otari'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: agent-otari-issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install agent deps
+        run: pip install openai
+
+      - name: Run coding agent via Otari
+        env:
+          LLM_BASE_URL: https://api.otari.ai/v1
+          LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
+          LLM_MODEL: ${{ vars.OTARI_MODEL || 'deepseek/deepseek-v4-pro-0813' }}
+          LLM_FALLBACK_MODEL: ${{ vars.OTARI_FALLBACK_MODEL || 'openai/gpt-4o-mini' }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          printf '%s\n\n%s\n' "$ISSUE_TITLE" "$ISSUE_BODY" > /tmp/task.md
+          AGENT_TASK="$(cat /tmp/task.md)" python3 .github/agent/run.py
+
+      - name: Persist agent memory to main
+        if: always()
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "muse-agent"
+          git config user.email "muse-agent@users.noreply.github.com"
+          git add memory/
+          if git diff --cached --quiet; then
+            echo "No memory changes to persist."
+          else
+            git commit -m "Agent memory update (issue #$ISSUE_NUMBER)"
+            git push origin HEAD:main || echo "memory push skipped (concurrent update)"
+          fi
+
+      - name: Open pull request
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          BRANCH="agent-otari/issue-$ISSUE_NUMBER"
+          SAFE_TITLE="$(printf 'Agent (Otari): %s' "$ISSUE_TITLE" | tr -d '"' | head -c 120)"
+          git config user.name "muse-agent"
+          git config user.email "muse-agent@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Agent made no changes."
+            gh issue comment "$ISSUE_NUMBER" --body "Agent (Otari) finished but made no changes. Nothing to review."
+            exit 0
+          fi
+          git commit -m "$SAFE_TITLE"
+          git push -u origin "$BRANCH"
+          {
+            echo "Automated fix for #$ISSUE_NUMBER, run through the Otari gateway."
+            echo
+            echo "## Agent summary"
+            cat .agent_summary.txt 2>/dev/null || echo "No summary provided."
+            echo
+            echo "## Token usage (reported by the gateway)"
+            cat .agent_usage.json 2>/dev/null || echo "No usage file produced."
+          } > /tmp/pr_body.md
+          PR_URL="$(gh pr create --title "$SAFE_TITLE" --body-file /tmp/pr_body.md)"
+          gh issue comment "$ISSUE_NUMBER" --body "Done — review the pull request: $PR_URL"

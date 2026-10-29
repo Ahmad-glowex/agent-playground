@@ -14,13 +14,71 @@ import traceback
 from openai import OpenAI
 
 BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.iteracompute.com/v1")
-API_KEY = os.environ["ITERACOMPUTE_API_KEY"]
+# LLM_API_KEY is the generic name (used for the Otari gateway token);
+# ITERACOMPUTE_API_KEY stays supported for the original workflow.
+API_KEY = os.environ.get("LLM_API_KEY") or os.environ["ITERACOMPUTE_API_KEY"]
 MODEL = os.environ.get("LLM_MODEL", "qwen/qwen3.8-27b")
+FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "")
 TASK = os.environ["AGENT_TASK"]
 REPO = os.environ.get("AGENT_REPO", os.getcwd())
 MAX_STEPS = int(os.environ.get("AGENT_MAX_STEPS", "25"))
 
 client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
+
+
+class UsageTracker:
+    """Accumulates per-call token usage reported by the gateway."""
+
+    def __init__(self):
+        self.calls = []
+
+    def record(self, model, usage):
+        entry = {
+            "model": model,
+            "prompt_tokens": getattr(usage, "prompt_tokens", None),
+            "completion_tokens": getattr(usage, "completion_tokens", None),
+            "total_tokens": getattr(usage, "total_tokens", None),
+        }
+        self.calls.append(entry)
+        print(f"[usage] {model}: {entry['total_tokens']} total tokens", flush=True)
+
+    def totals(self):
+        return {
+            "calls": len(self.calls),
+            "prompt_tokens": sum(c["prompt_tokens"] or 0 for c in self.calls),
+            "completion_tokens": sum(c["completion_tokens"] or 0 for c in self.calls),
+            "total_tokens": sum(c["total_tokens"] or 0 for c in self.calls),
+            "per_call": self.calls,
+        }
+
+
+class ModelRouter:
+    """Calls the primary model; on a gateway/provider error, switches to
+    the fallback model (a different provider via the same gateway) and
+    stays on it for the rest of the run. With no fallback configured the
+    original error propagates."""
+
+    def __init__(self, create_fn, primary, fallback=""):
+        self._create = create_fn
+        self.model = primary
+        self.fallback = fallback
+        self.switched = False
+
+    def create(self, **kwargs):
+        try:
+            return self._create(model=self.model, **kwargs)
+        except Exception:
+            if not self.fallback or self.switched or self.model == self.fallback:
+                raise
+            print(f"[router] {self.model} failed; switching to fallback "
+                  f"{self.fallback}", flush=True)
+            self.model = self.fallback
+            self.switched = True
+            return self._create(model=self.model, **kwargs)
+
+
+usage = UsageTracker()
+router = ModelRouter(client.chat.completions.create, MODEL, FALLBACK_MODEL)
 
 
 def sh(cmd, timeout=120):
@@ -111,10 +169,11 @@ def main():
     summary = None
     try:
         for step in range(MAX_STEPS):
-            r = client.chat.completions.create(
-                model=MODEL, messages=messages, tools=TOOLS,
+            r = router.create(
+                messages=messages, tools=TOOLS,
                 tool_choice="auto", temperature=0.2, max_tokens=2048,
             )
+            usage.record(router.model, getattr(r, "usage", None))
             m = r.choices[0].message
             messages.append(m)
             if not m.tool_calls:
@@ -142,9 +201,16 @@ def main():
     except Exception:  # noqa: BLE001
         summary = (summary or "") + "\nAgent crashed:\n" + traceback.format_exc()[-2000:]
     summary = summary or "Agent finished without calling done()."
+    totals = usage.totals()
+    summary += (f"\n\nModel usage (via {BASE_URL}): {totals['calls']} calls, "
+                f"{totals['total_tokens']} total tokens, final model "
+                f"{router.model}"
+                + (" (fallback engaged)" if router.switched else "") + ".")
     print("SUMMARY:", summary, flush=True)
     with open(os.path.join(REPO, ".agent_summary.txt"), "w") as f:
         f.write(summary)
+    with open(os.path.join(REPO, ".agent_usage.json"), "w") as f:
+        json.dump({"base_url": BASE_URL, **totals}, f, indent=2)
 
 
 if __name__ == "__main__":
