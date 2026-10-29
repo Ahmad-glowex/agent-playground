@@ -1,58 +1,47 @@
 {
   "base_url": "https://api.otari.ai/api/v1",
   "fallback_engaged": false,
-  "calls": 8,
-  "prompt_tokens": 15252,
-  "completion_tokens": 937,
-  "total_tokens": 16189,
+  "calls": 5,
+  "prompt_tokens": 8076,
+  "completion_tokens": 438,
+  "total_tokens": 8514,
+  "total_cost_usd": 0.004879,
+  "costed_calls": 5,
   "per_call": [
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1128,
-      "completion_tokens": 125,
-      "total_tokens": 1253
+      "prompt_tokens": 1101,
+      "completion_tokens": 113,
+      "total_tokens": 1214,
+      "cost_usd": 0.001725
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1492,
+      "prompt_tokens": 1467,
       "completion_tokens": 48,
-      "total_tokens": 1540
+      "total_tokens": 1515,
+      "cost_usd": 0.000803
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1676,
-      "completion_tokens": 145,
-      "total_tokens": 1821
+      "prompt_tokens": 1723,
+      "completion_tokens": 116,
+      "total_tokens": 1839,
+      "cost_usd": 0.001006
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1837,
+      "prompt_tokens": 1855,
       "completion_tokens": 48,
-      "total_tokens": 1885
+      "total_tokens": 1903,
+      "cost_usd": 0.000693
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2071,
-      "completion_tokens": 127,
-      "total_tokens": 2198
-    },
-    {
-      "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2214,
-      "completion_tokens": 48,
-      "total_tokens": 2262
-    },
-    {
-      "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2289,
-      "completion_tokens": 239,
-      "total_tokens": 2528
-    },
-    {
-      "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2545,
-      "completion_tokens": 157,
-      "total_tokens": 2702
+      "prompt_tokens": 1930,
+      "completion_tokens": 113,
+      "total_tokens": 2043,
+      "cost_usd": 0.000652
     }
   ]
 }

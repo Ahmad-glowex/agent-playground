@@ -4,6 +4,6 @@
 def total(items):
     """Return the sum of all items."""
     s = 0
-    for i in range(len(items) - 1):  # BUG: skips the last item
-        s += items[i]
+    for item in items:
+        s += item
     return s
