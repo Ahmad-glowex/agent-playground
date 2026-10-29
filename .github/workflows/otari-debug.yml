@@ -8,13 +8,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Body-line bisect + full 403 page
+      - name: Backtick micro-bisect
         env:
           LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install -q openai
-          gh issue view 3 --json body --jq '.body' > /tmp/body.md
           python3 - <<'EOF'
           import os, sys
           os.environ.setdefault("AGENT_TASK", "debug")
@@ -26,35 +24,23 @@ jobs:
           client = OpenAI(base_url="https://api.otari.ai/api/v1",
                           api_key=os.environ["LLM_API_KEY"])
           system = open(".github/agent/AGENT.md").read()
-          body = open("/tmp/body.md").read().strip()
-          lines = [l for l in body.split("\n") if l.strip()]
-          variants = [(f"b{i+1}", l) for i, l in enumerate(lines)]
-          variants.append(("b_all_stripped", body.replace("`", "")))
-
-          def attempt(name, user):
+          variants = [
+              ("m1_backticked_call", "Please look at `total()` in the code."),
+              ("m2_bare_call", "Please look at total() in the code."),
+              ("m3_backticked_path", "Please look at `app/calc.py` today."),
+              ("m4_backticked_args", "Check `total([1, 2, 3])` please."),
+              ("m5_backticked_shell", "Now run `ls -la` for me."),
+              ("m6_plain_args", "Check total([1, 2, 3]) please."),
+          ]
+          for name, user in variants:
               try:
                   client.chat.completions.create(
                       model="deepseek/deepseek-v4-pro-0813",
                       messages=[{"role": "system", "content": system},
                                 {"role": "user", "content": user}],
                       tools=agent_run.TOOLS, tool_choice="auto",
-                      temperature=0.2, max_tokens=2048)
+                      temperature=0.2, max_tokens=50)
                   print(name, "-> OK")
-                  return None
               except Exception as e:
                   print(name, "-> ERROR:", type(e).__name__)
-                  return getattr(e, "response", None)
-
-          bad = None
-          for name, text in variants:
-              resp = attempt(name, text)
-              if resp is not None and bad is None:
-                  bad = resp
-          if bad is not None:
-              print("=== full 403 headers ===")
-              for k in ("server", "cf-ray", "content-type", "x-otari-error",
-                        "via", "date"):
-                  print(k, ":", bad.headers.get(k))
-              print("=== full 403 body ===")
-              print(bad.text[:1500])
           EOF
