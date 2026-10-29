@@ -27,11 +27,21 @@ The original `agent` workflow still talks to its provider directly.
   - Hardening in the same file: the `bash` tool's subprocess environment
     is scrubbed of secrets, and the file tools enforce the repo-only /
     no-`.github/` / no-dotfiles rules in code (see Token safety).
-  - `UsageTracker`: each successful response's token usage is logged per
-    call and written to `.agent_usage.json`, and a totals line is appended
-    to the agent summary that lands in the pull request. If a fallback
-    occurred, the summary flags that the totals cover received responses
-    only — a failed call's tokens are invisible to the client.
+  - `UsageTracker`: each successful response's token usage — and the
+    per-call `cost_usd` the gateway reports — is logged per call and
+    written to `.agent_usage.json`, and a totals line (with tracked
+    cost, and a coverage note when only some calls reported a cost) is
+    appended to the agent summary that lands in the pull request. If a
+    fallback occurred, the summary flags that the totals cover received
+    responses only — a failed call's tokens are invisible to the client.
+  - `waf_safe` guard: on Otari runs, markdown inline code that wraps a
+    function call is unwrapped in the task text and in tool results
+    before they are sent to the gateway, because the gateway's front-end
+    WAF rejects exactly that shape with a bare 403 (see Feedback). The
+    rewrite is span-by-span (it can never merge spans) and idempotent.
+    Model-authored text and tool-call arguments are deliberately NOT
+    rewritten — changing them would corrupt files the agent writes —
+    so they remain a theoretical residual risk, stated plainly.
 - `.github/workflows/agent-otari.yml`
   - Same issue→PR flow as the original workflow, triggered by the
     `agent-otari` label, with Otari as the gateway. Model and fallback are
@@ -49,8 +59,10 @@ The original `agent` workflow still talks to its provider directly.
   models (defaults: `deepseek/deepseek-v4-pro-0813` primary,
   `bedrock:amazon.nova-lite-v1:0` fallback; both overridable by repo variables).
 - Client-side failover routing across providers via the gateway.
-- Usage observability: per-call token usage from gateway responses,
-  written into the pull request.
+- Usage observability: per-call token usage and cost from gateway
+  responses, written into the pull request.
+- A WAF-compatibility rewrite (`waf_safe`) for the gateway's front-end
+  filter described under Feedback.
 
 Provided by the Otari workspace — verified in the dashboard on
 2026-10-29 after the runs above:

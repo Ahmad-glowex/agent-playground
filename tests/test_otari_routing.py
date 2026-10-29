@@ -224,6 +224,78 @@ def test_env_precedence_iteracompute_still_works():
     assert key == "itera", key
 
 
+def test_waf_safe_strips_backticks_around_calls():
+    out, n = agent_run.waf_safe("The `total()` function in `app/calc.py` is wrong")
+    assert out == "The total() function in `app/calc.py` is wrong", out
+    assert n == 1, n
+
+
+def test_waf_safe_strips_call_with_arguments():
+    out, n = agent_run.waf_safe("- `total([1, 2, 3])` returns `3`")
+    assert out == "- total([1, 2, 3]) returns `3`", out
+    assert n == 1, n
+
+
+def test_waf_safe_leaves_other_inline_code_alone():
+    text = "Run `ls -la`, see `app/calc.py`, edit `tests/test_calc.py`"
+    out, n = agent_run.waf_safe(text)
+    assert out == text and n == 0, (out, n)
+
+
+def test_waf_safe_no_spans():
+    out, n = agent_run.waf_safe("plain text, no code at all")
+    assert out == "plain text, no code at all" and n == 0
+
+
+def test_waf_safe_never_merges_spans():
+    # The old regex matched across two spans when a paren sat between
+    # them and left a blocked-shape span behind (skeptic finding).
+    out, n = agent_run.waf_safe("`config` (optional) `run()`")
+    assert out == "`config` (optional) run()", out
+    assert n == 1, n
+    out, n = agent_run.waf_safe("`a` (b) `c()`")
+    assert out == "`a` (b) c()", out
+    assert n == 1, n
+
+
+def test_waf_safe_is_idempotent():
+    text = ("Fix `total()` in `app/calc.py`: `total([1, 2, 3])` fails, "
+            "`config` (optional) `run()` mentioned, run `ls -la`")
+    once, n1 = agent_run.waf_safe(text)
+    twice, n2 = agent_run.waf_safe(once)
+    assert n1 == 3, (once, n1)
+    assert twice == once and n2 == 0, (twice, n2)
+
+
+def test_is_otari_url():
+    f = agent_run._is_otari_url
+    assert f("https://api.otari.ai/api/v1")
+    assert f("https://API.OTARI.AI/api/v1")
+    assert not f("https://api.iteracompute.com/v1")
+    assert not f("https://otari.ai@evil.example/v1")
+    assert not f("http://localhost:8080/otari.ai")
+
+
+def test_usage_cost_totals():
+    t = UsageTracker()
+    t.record("m", SimpleNamespace(prompt_tokens=10, completion_tokens=5,
+                                  total_tokens=15, cost_usd="0.0017"))
+    t.record("m", SimpleNamespace(prompt_tokens=1, completion_tokens=1,
+                                  total_tokens=2,
+                                  model_extra={"cost_usd": "0.0003"}))
+    totals = t.totals()
+    assert totals["total_cost_usd"] == 0.002, totals
+    assert totals["per_call"][0]["cost_usd"] == 0.0017
+    assert totals["per_call"][1]["cost_usd"] == 0.0003
+
+
+def test_usage_cost_absent_is_none():
+    t = UsageTracker()
+    t.record("m", SimpleNamespace(prompt_tokens=1, completion_tokens=1,
+                                  total_tokens=2))
+    assert t.totals()["total_cost_usd"] is None
+
+
 if __name__ == "__main__":
     test_router_uses_primary_when_it_works()
     test_router_falls_back_and_sticks()
@@ -236,6 +308,15 @@ if __name__ == "__main__":
     test_usage_totals()
     test_usage_handles_missing_usage()
     test_usage_handles_partial_usage()
+    test_waf_safe_strips_backticks_around_calls()
+    test_waf_safe_strips_call_with_arguments()
+    test_waf_safe_leaves_other_inline_code_alone()
+    test_waf_safe_no_spans()
+    test_waf_safe_never_merges_spans()
+    test_waf_safe_is_idempotent()
+    test_is_otari_url()
+    test_usage_cost_totals()
+    test_usage_cost_absent_is_none()
     test_env_precedence_generic_key_wins()
     test_env_precedence_iteracompute_still_works()
     print("all tests passed")
