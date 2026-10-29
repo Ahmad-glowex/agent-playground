@@ -8,14 +8,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: User-text bisect
+      - name: Body-line bisect + full 403 page
         env:
           LLM_API_KEY: ${{ secrets.OTARI_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install -q openai
-          gh issue view 3 --json title,body \
-            --jq '"\(.title)\n\n\(.body)"' > /tmp/task.md
+          gh issue view 3 --json body --jq '.body' > /tmp/body.md
           python3 - <<'EOF'
           import os, sys
           os.environ.setdefault("AGENT_TASK", "debug")
@@ -27,30 +26,35 @@ jobs:
           client = OpenAI(base_url="https://api.otari.ai/api/v1",
                           api_key=os.environ["LLM_API_KEY"])
           system = open(".github/agent/AGENT.md").read()
-          task = open("/tmp/task.md").read().strip()
-          title, body = task.split("\n\n", 1)
-          paren = ("(This issue is the live demo for the Otari gateway "
-                   "mode \u2014 Mozilla Developers Wilding hackathon.)")
-          variants = [
-              ("u1_title_only", title),
-              ("u2_body_only", body),
-              ("u3_exact", f"TASK (from GitHub issue):\n{task}"),
-              ("u4_no_paren", f"TASK (from GitHub issue):\n{task}".replace(paren, "").strip()),
-              ("u5_paren_only", paren),
-          ]
-          for name, user in variants:
+          body = open("/tmp/body.md").read().strip()
+          lines = [l for l in body.split("\n") if l.strip()]
+          variants = [(f"b{i+1}", l) for i, l in enumerate(lines)]
+          variants.append(("b_all_stripped", body.replace("`", "")))
+
+          def attempt(name, user):
               try:
-                  r = client.chat.completions.create(
+                  client.chat.completions.create(
                       model="deepseek/deepseek-v4-pro-0813",
                       messages=[{"role": "system", "content": system},
                                 {"role": "user", "content": user}],
                       tools=agent_run.TOOLS, tool_choice="auto",
                       temperature=0.2, max_tokens=2048)
                   print(name, "-> OK")
+                  return None
               except Exception as e:
-                  print(name, "-> ERROR:", type(e).__name__, str(e)[:140])
-                  resp = getattr(e, "response", None)
-                  if resp is not None:
-                      print("   status:", resp.status_code,
-                            "body:", resp.text[:250])
+                  print(name, "-> ERROR:", type(e).__name__)
+                  return getattr(e, "response", None)
+
+          bad = None
+          for name, text in variants:
+              resp = attempt(name, text)
+              if resp is not None and bad is None:
+                  bad = resp
+          if bad is not None:
+              print("=== full 403 headers ===")
+              for k in ("server", "cf-ray", "content-type", "x-otari-error",
+                        "via", "date"):
+                  print(k, ":", bad.headers.get(k))
+              print("=== full 403 body ===")
+              print(bad.text[:1500])
           EOF
