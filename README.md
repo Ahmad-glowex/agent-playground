@@ -9,3 +9,12 @@ code, runs the tests, and opens a pull request for review.
 > ⚠️ The agent's model API is a free shared provider (IteraCompute).
 > Do NOT put private code, secrets, or personal data in this repo or
 > in its issues. Test code only.
+
+## Otari mode (Mozilla Developers Wilding hackathon)
+
+On the `wilding-otari` branch the same agent gains an Otari mode: under
+the `agent-otari` workflow, **all its model calls are routed through the
+Otari gateway** (Mozilla.ai). Add the `agent-otari` label to an issue
+instead of `agent`. It adds cross-provider failover
+(primary model → fallback model through the same gateway endpoint) and
+per-call token-usage reporting in the PR. See [OTARI.md](OTARI.md).
