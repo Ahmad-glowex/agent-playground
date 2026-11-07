@@ -1,5 +1,3 @@
-Fixed the off-by-one bug in app/calc.py's total() function. The original code used `for i in range(len(items))`, which iterates from 0 to len(items)-1 and skips the last element. Changed it to iterate directly over the items (`for item in items: s += item`), which correctly sums all elements including the last one.
+Fixed the off-by-one bug in app/calc.py's total() function. The original code used `range(len(items) - 1)`, which skipped the last element (and produced 0 for a single-element list). Changed it to iterate directly over items (`for item in items`). Verified with `python tests/test_calc.py` (all tests passed) and `python tests/test_otari_routing.py` (all tests passed).
 
-Verified by running `python tests/test_calc.py` — all tests pass (total([1,2,3])==6, total([5])==5, total([])==0).
-
-Model usage (via https://api.otari.ai/api/v1): 8 calls, 16189 total tokens, final model deepseek/deepseek-v4-pro-0813.
+Model usage (via https://api.otari.ai/api/v1): 7 calls, 13444 total tokens, tracked cost $0.0098, final model deepseek/deepseek-v4-pro-0813.

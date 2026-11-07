@@ -1,58 +1,61 @@
 {
   "base_url": "https://api.otari.ai/api/v1",
   "fallback_engaged": false,
-  "calls": 8,
-  "prompt_tokens": 15252,
-  "completion_tokens": 937,
-  "total_tokens": 16189,
+  "calls": 7,
+  "prompt_tokens": 12739,
+  "completion_tokens": 705,
+  "total_tokens": 13444,
+  "total_cost_usd": 0.009794,
+  "costed_calls": 7,
   "per_call": [
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1128,
-      "completion_tokens": 125,
-      "total_tokens": 1253
+      "prompt_tokens": 1077,
+      "completion_tokens": 89,
+      "total_tokens": 1166,
+      "cost_usd": 0.001632
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1492,
+      "prompt_tokens": 1235,
+      "completion_tokens": 115,
+      "total_tokens": 1350,
+      "cost_usd": 0.000676
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 1795,
+      "completion_tokens": 163,
+      "total_tokens": 1958,
+      "cost_usd": 0.001529
+    },
+    {
+      "model": "deepseek/deepseek-v4-pro-0813",
+      "prompt_tokens": 1974,
       "completion_tokens": 48,
-      "total_tokens": 1540
+      "total_tokens": 2022,
+      "cost_usd": 0.000848
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1676,
-      "completion_tokens": 145,
-      "total_tokens": 1821
+      "prompt_tokens": 2049,
+      "completion_tokens": 61,
+      "total_tokens": 2110,
+      "cost_usd": 0.000672
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 1837,
-      "completion_tokens": 48,
-      "total_tokens": 1885
+      "prompt_tokens": 2171,
+      "completion_tokens": 87,
+      "total_tokens": 2258,
+      "cost_usd": 0.000898
     },
     {
       "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2071,
-      "completion_tokens": 127,
-      "total_tokens": 2198
-    },
-    {
-      "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2214,
-      "completion_tokens": 48,
-      "total_tokens": 2262
-    },
-    {
-      "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2289,
-      "completion_tokens": 239,
-      "total_tokens": 2528
-    },
-    {
-      "model": "deepseek/deepseek-v4-pro-0813",
-      "prompt_tokens": 2545,
-      "completion_tokens": 157,
-      "total_tokens": 2702
+      "prompt_tokens": 2438,
+      "completion_tokens": 142,
+      "total_tokens": 2580,
+      "cost_usd": 0.003539
     }
   ]
 }
